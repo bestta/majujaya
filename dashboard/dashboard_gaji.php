@@ -1,6 +1,6 @@
 <?php
+include 'db.php';
 include '../config/database.php';
-include '../templates/header.php';
 
 $query = "SELECT
     k.nama AS Pegawai,
@@ -65,10 +65,11 @@ $result = $koneksi->query($query);
                         <?php endwhile; ?>
                     </tbody>
                 </table>
+                <!-- Tombol Export -->
+                <div class="container mt-4 d-flex gap-3 justify-content-center">
+                    <a href="export_gaji_excel.php" class="btn btn-success">Export Excel</a>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-
 </body>
 </html>
