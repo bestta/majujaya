@@ -1,5 +1,6 @@
 <?php
 include '../config/database.php';
+include '../templates/header.php';
 
 // Check for status messages from other pages
 $status = $_GET['status'] ?? '';
