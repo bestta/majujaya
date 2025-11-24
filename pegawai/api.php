@@ -1,229 +1,176 @@
 <?php
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE");
+header("Content-Type: application/json");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-include_once '../config/database.php';
+include '../config/database.php';
 
-// Inisialisasi koneksi database
-$database = new Database();
-$db = $database->getConnection();
+$method = $_SERVER['REQUEST_METHOD'];
 
-if (!$db) {
-    http_response_code(503);
-    echo json_encode(["message" => "Tidak dapat terhubung ke database."]);
+// Handle preflight OPTIONS request for CORS
+if ($method == 'OPTIONS') {
+    http_response_code(200);
     exit();
 }
 
-$method = $_SERVER['REQUEST_METHOD'];
-$uri = explode('/', trim($_SERVER['REQUEST_URI'], '/'));
+$path = isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] : '/';
+$path_parts = explode('/', trim($path, '/'));
 
-// Logika routing untuk menangani berbagai jenis permintaan.
-// Pertama, kita periksa parameter kueri (misal: ?action=gaji&id=1)
-$action = isset($_GET['action']) ? $_GET['action'] : null;
-$pegawai_id_from_query = isset($_GET['id']) ? (int)$_GET['id'] : null;
-
-// Jika tidak ada dari query, kita coba dari path (misal: /api.php/1)
-$api_index = array_search('api.php', $uri);
-$pegawai_id = null;
-if ($api_index !== false && isset($uri[$api_index + 1]) && is_numeric($uri[$api_index + 1])) {
-    $pegawai_id = (int)$uri[$api_index + 1];
+function send_response($data, $status_code = 200) {
+    http_response_code($status_code);
+    echo json_encode($data);
+    exit();
 }
 
 switch ($method) {
     case 'GET':
-        if ($action === 'gaji' && $pegawai_id_from_query) {
-            // Menangani GET pegawai/api.php?action=gaji&id={id}&...
-            getGajiPegawai($db, $pegawai_id_from_query);
-        } elseif ($pegawai_id) {
-            // Menangani GET pegawai/api.php/{id}
-            getPegawaiById($db, $pegawai_id);
+        if (isset($path_parts[0]) && $path_parts[0] !== '' && is_numeric($path_parts[0])) {
+            $id_pegawai = intval($path_parts[0]);
+            // Cek apakah request untuk rekap gaji: GET /pegawai/{id}/gaji
+            if (isset($path_parts[1]) && $path_parts[1] == 'gaji') {
+                $bulan = $_GET['bulan'] ?? null;
+                $tahun = $_GET['tahun'] ?? null;
+
+                if (!$bulan || !$tahun) {
+                    send_response(['error' => 'Parameter bulan dan tahun diperlukan'], 400);
+                }
+                
+                // Asumsi ada tabel 'gaji' dengan struktur (id_gaji, id_pegawai, bulan, tahun, total_gaji, dll)
+                // Query ini hanyalah contoh, sesuaikan dengan struktur tabel gaji Anda.
+                $query = "SELECT * FROM gaji WHERE id_pegawai = ? AND bulan = ? AND tahun = ?";
+                $stmt = mysqli_prepare($koneksi, $query);
+                mysqli_stmt_bind_param($stmt, 'iii', $id_pegawai, $bulan, $tahun);
+                mysqli_stmt_execute($stmt);
+                $result = mysqli_stmt_get_result($stmt);
+                $gaji = mysqli_fetch_assoc($result);
+
+                if ($gaji) {
+                    send_response($gaji);
+                } else {
+                    send_response(['message' => 'Data gaji tidak ditemukan'], 404);
+                }
+            } else {
+                // GET /pegawai/{id}
+                $query = "SELECT p.id_pegawai, p.nama, p.gelar, p.id_jabatan, j.nama_jabatan 
+                          FROM pegawai p
+                          JOIN jabatan j ON p.id_jabatan = j.id_jabatan
+                          WHERE p.id_pegawai = ?";
+                $stmt = mysqli_prepare($koneksi, $query);
+                mysqli_stmt_bind_param($stmt, 'i', $id_pegawai);
+                mysqli_stmt_execute($stmt);
+                $result = mysqli_stmt_get_result($stmt);
+                $pegawai = mysqli_fetch_assoc($result);
+
+                if ($pegawai) {
+                    send_response($pegawai);
+                } else {
+                    send_response(['error' => 'Pegawai tidak ditemukan'], 404);
+                }
+            }
         } else {
             // GET /pegawai
-            getAllPegawai($db);
+            $query = "SELECT p.id_pegawai, p.nama, p.gelar, j.nama_jabatan 
+                      FROM pegawai p
+                      JOIN jabatan j ON p.id_jabatan = j.id_jabatan
+                      ORDER BY p.nama ASC";
+            $result = mysqli_query($koneksi, $query);
+            $pegawai_list = mysqli_fetch_all($result, MYSQLI_ASSOC);
+            send_response($pegawai_list);
         }
         break;
 
     case 'POST':
         // POST /pegawai
-        createPegawai($db);
+        $data = json_decode(file_get_contents("php://input"), true);
+
+        if (empty($data['nama']) || empty($data['id_jabatan'])) {
+            send_response(['error' => 'Nama dan id_jabatan tidak boleh kosong'], 400);
+        }
+
+        $nama = $data['nama'];
+        $gelar = $data['gelar'] ?? null;
+        $id_jabatan = $data['id_jabatan'];
+
+        $query = "INSERT INTO pegawai (nama, gelar, id_jabatan) VALUES (?, ?, ?)";
+        $stmt = mysqli_prepare($koneksi, $query);
+        mysqli_stmt_bind_param($stmt, 'ssi', $nama, $gelar, $id_jabatan);
+        
+        if (mysqli_stmt_execute($stmt)) {
+            $new_id = mysqli_insert_id($koneksi);
+            send_response(['id_pegawai' => $new_id, 'message' => 'Pegawai berhasil ditambahkan'], 201);
+        } else {
+            send_response(['error' => 'Gagal menambahkan pegawai: ' . mysqli_error($koneksi)], 500);
+        }
         break;
 
     case 'PUT':
         // PUT /pegawai/{id}
-        if ($pegawai_id) {
-            updatePegawai($db, $pegawai_id);
+        if (isset($path_parts[0]) && is_numeric($path_parts[0])) {
+            $id_pegawai = intval($path_parts[0]);
+            $data = json_decode(file_get_contents("php://input"), true);
+
+            if (empty($data['nama']) || empty($data['id_jabatan'])) {
+                send_response(['error' => 'Nama dan id_jabatan tidak boleh kosong'], 400);
+            }
+
+            $nama = $data['nama'];
+            $gelar = $data['gelar'] ?? null;
+            $id_jabatan = $data['id_jabatan'];
+
+            $query = "UPDATE pegawai SET nama = ?, gelar = ?, id_jabatan = ? WHERE id_pegawai = ?";
+            $stmt = mysqli_prepare($koneksi, $query);
+            mysqli_stmt_bind_param($stmt, 'ssii', $nama, $gelar, $id_jabatan, $id_pegawai);
+
+            if (mysqli_stmt_execute($stmt)) {
+                if (mysqli_stmt_affected_rows($stmt) > 0) {
+                    send_response(['message' => 'Data pegawai berhasil diperbarui']);
+                } else {
+                    send_response(['message' => 'Tidak ada data yang diperbarui atau pegawai tidak ditemukan'], 404);
+                }
+            } else {
+                send_response(['error' => 'Gagal memperbarui data: ' . mysqli_error($koneksi)], 500);
+            }
         } else {
-            http_response_code(400);
-            echo json_encode(["message" => "ID Pegawai dibutuhkan."]);
+            send_response(['error' => 'ID Pegawai tidak valid'], 400);
         }
         break;
 
     case 'DELETE':
         // DELETE /pegawai/{id}
-        if ($pegawai_id) {
-            deletePegawai($db, $pegawai_id);
+        if (isset($path_parts[0]) && is_numeric($path_parts[0])) {
+            $id_pegawai = intval($path_parts[0]);
+
+            // Periksa apakah ada record terkait di tabel lain yang memiliki ON DELETE RESTRICT
+            // Contoh: tabel gaji. Jika ada, hapus dulu record di sana atau ubah constraint.
+            // Untuk contoh ini, kita asumsikan bisa langsung dihapus.
+
+            $query = "DELETE FROM pegawai WHERE id_pegawai = ?";
+            $stmt = mysqli_prepare($koneksi, $query);
+            mysqli_stmt_bind_param($stmt, 'i', $id_pegawai);
+
+            if (mysqli_stmt_execute($stmt)) {
+                if (mysqli_stmt_affected_rows($stmt) > 0) {
+                    send_response(['message' => 'Pegawai berhasil dihapus']);
+                } else {
+                    send_response(['error' => 'Pegawai tidak ditemukan'], 404);
+                }
+            } else {
+                // Error ini kemungkinan besar terjadi karena constraint ON DELETE RESTRICT
+                if(mysqli_errno($koneksi) == 1451) { // Foreign key constraint fails
+                    send_response(['error' => 'Gagal menghapus pegawai karena data terkait masih ada di tabel lain (misal: gaji).'], 409); // 409 Conflict
+                }
+                send_response(['error' => 'Gagal menghapus pegawai: ' . mysqli_error($koneksi)], 500);
+            }
         } else {
-            http_response_code(400);
-            echo json_encode(["message" => "ID Pegawai dibutuhkan."]);
+            send_response(['error' => 'ID Pegawai tidak valid'], 400);
         }
         break;
 
     default:
-        http_response_code(405);
-        echo json_encode(["message" => "Metode tidak diizinkan."]);
+        send_response(['error' => 'Metode tidak diizinkan'], 405);
         break;
 }
 
-function getAllPegawai($db)
-{
-    $query = "SELECT id_pegawai, nama, gelar, id_jabatan,FROM pegawai";
-    $stmt = $db->prepare($query);
-    $stmt->execute();
-    $pegawai = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo json_encode($pegawai);
-}
-
-function getPegawaiById($db, $id)
-{
-    $query = "SELECT id_pegawai, nama, gelar, id_jabatan,FROM pegawai WHERE id_pegawai = :id_pegawai";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':id_pegawai', $id);
-    $stmt->execute();
-    $pegawai = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($pegawai) {
-        echo json_encode($pegawai);
-    } else {
-        http_response_code(404);
-        echo json_encode(["message" => "Pegawai tidak ditemukan."]);
-    }
-}
-
-function createPegawai($db)
-{
-    $data = json_decode(file_get_contents("php://input"));
-
-    if (!empty($data->nama) && !empty($data->id_jabatan) && !empty($data->tgl_masuk)) {
-        $query = "INSERT INTO pegawai (id_pegawai, nama, gelar, id_jabatan) VALUES (:id_pegawai, :nama, :gelar, :id_jabatan)";
-        $stmt = $db->prepare($query);
-
-        $stmt->bindParam(':id_pegawai', $data->id_pegawai);
-        $stmt->bindParam(':nama', $data->nama);
-        $stmt->bindParam(':gelar', $data->gelar);
-        $stmt->bindParam(':id_jabatan', $data->id_jabatan);
-
-        if ($stmt->execute()) {
-            http_response_code(201);
-            echo json_encode(["message" => "Pegawai berhasil dibuat.", "id_pegawai" => $db->lastInsertId()]);
-        } else {
-            http_response_code(503);
-            echo json_encode(["message" => "Gagal membuat pegawai."]);
-        }
-    } else {
-        http_response_code(400);
-        echo json_encode(["message" => "Data tidak lengkap."]);
-    }
-}
-
-function updatePegawai($db, $id)
-{
-    $data = json_decode(file_get_contents("php://input"));
-
-    if (!empty($data->nama) && !empty($data->id_jabatan) && !empty($data->tgl_masuk)) {
-        $query = "UPDATE pegawai SET id_pegawai = :id_pegawai, nama = :nama, gelar = :gelar, id_jabatan = :id_jabatan WHERE id_pegawai = :id_pegawai";
-        $stmt = $db->prepare($query);
-
-       $stmt->bindParam(':id_pegawai', $data->id_pegawai);
-        $stmt->bindParam(':nama', $data->nama);
-        $stmt->bindParam(':gelar', $data->gelar);
-        $stmt->bindParam(':id_jabatan', $data->id_jabatan);
-
-        if ($stmt->execute()) {
-            if ($stmt->rowCount() > 0) {
-                echo json_encode(["message" => "Pegawai berhasil diperbarui."]);
-            } else {
-                http_response_code(404);
-                echo json_encode(["message" => "Pegawai tidak ditemukan atau data tidak berubah."]);
-            }
-        } else {
-            http_response_code(503);
-            echo json_encode(["message" => "Gagal memperbarui pegawai."]);
-        }
-    } else {
-        http_response_code(400);
-        echo json_encode(["message" => "Data tidak lengkap."]);
-    }
-}
-
-function deletePegawai($db, $id)
-{
-    $query = "DELETE FROM pegawai WHERE id_pegawai = :id_pegawai";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':id_pegawai', $id_pegawai);
-
-    if ($stmt->execute()) {
-        if ($stmt->rowCount() > 0) {
-            echo json_encode(["message" => "Pegawai berhasil dihapus."]);
-        } else {
-            http_response_code(404);
-            echo json_encode(["message" => "Pegawai tidak ditemukan."]);
-        }
-    } else {
-        http_response_code(503);
-        echo json_encode(["message" => "Gagal menghapus pegawai."]);
-    }
-}
-
-function getGajiPegawai($db, $id)
-{
-    $bulan = isset($_GET['bulan']) ? $_GET['bulan'] : date('m');
-    $tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
-
-    // Contoh logika rekap gaji sederhana
-    // Anda perlu menyesuaikan query ini dengan struktur tabel 'jabatan' dan 'presensi' Anda.
-    $query = "SELECT p.nama, j.nama_jabatan, j.gaji_pokok, j.tunjangan 
-              FROM pegawai p 
-              JOIN jabatan j ON p.id_jabatan = j.id 
-              WHERE p.id = :id";
-
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':id', $id);
-    $stmt->execute();
-    $pegawai = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($pegawai) {
-        // --- Logika Kalkulasi Gaji Dinamis (Contoh) ---
-        // Di dunia nyata, Anda akan melakukan query ke tabel 'presensi' dan 'lembur'.
-        // Di sini kita simulasikan untuk tujuan demonstrasi.
-
-        // Contoh: Hitung potongan berdasarkan jumlah hari kerja di bulan tersebut.
-        // Misal, potongan 50rb untuk setiap hari tidak masuk (simulasi acak).
-        $jumlah_hari_kerja = cal_days_in_month(CAL_GREGORIAN, (int)$bulan, (int)$tahun);
-        $simulasi_absen = rand(0, 2); // Simulasi pegawai absen 0-2 hari
-        $potongan_per_hari = 50000;
-        $total_potongan = $simulasi_absen * $potongan_per_hari;
-
-        // Contoh: Hitung lembur (simulasi acak).
-        $simulasi_jam_lembur = rand(0, 10); // Simulasi 0-10 jam lembur
-        $upah_lembur_per_jam = 25000;
-        $total_lembur = $simulasi_jam_lembur * $upah_lembur_per_jam;
-
-        $gaji_bersih = ($pegawai['gaji_pokok'] + $pegawai['tunjangan'] + $total_lembur) - $total_potongan;
-
-        $rekap = [
-            "pegawai_id" => $id,
-            "nama" => $pegawai['nama'],
-            "jabatan" => $pegawai['nama_jabatan'],
-            "periode" => "$bulan-$tahun",
-            "gaji_pokok" => (float)$pegawai['gaji_pokok'],
-            "tunjangan" => (float)$pegawai['tunjangan'],
-            "lembur" => $total_lembur,
-            "potongan" => $total_potongan,
-            "gaji_bersih" => $gaji_bersih
-        ];
-        echo json_encode($rekap); // Mengembalikan satu objek gaji
-    } else {
-        http_response_code(404);
-        echo json_encode(["message" => "Pegawai tidak ditemukan."]);
-    }
-}
+mysqli_close($koneksi);
 ?>
