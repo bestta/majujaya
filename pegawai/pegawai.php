@@ -1,6 +1,6 @@
 <?php
 header("Content-Type: application/json");
-require_once 'db.php';
+require_once 'db.php'; // Path ini sudah benar setelah file dipindahkan
 
 $method = $_SERVER['REQUEST_METHOD'];
 $path = isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] : '/';
@@ -11,9 +11,9 @@ $pdo = getDbConnection();
 switch ($method) {
     case 'GET':
         // Handles GET /pegawai AND GET /pegawai/{id}/gaji
-        if (isset($path_parts[0]) && $path_parts[0] === 'pegawai' && count($path_parts) > 1) {
-            $id_pegawai = (int)$path_parts[1];
-            if (isset($path_parts[2]) && $path_parts[2] === 'gaji') {
+        if (isset($path_parts[0]) && is_numeric($path_parts[0])) {
+            $id_pegawai = (int)$path_parts[0];
+            if (isset($path_parts[1]) && $path_parts[1] === 'gaji') {
                 getGajiPegawai($pdo, $id_pegawai);
             } else {
                 // You could implement GET /pegawai/{id} here if needed
@@ -32,8 +32,8 @@ switch ($method) {
 
     case 'PUT':
         // Handles PUT /pegawai/{id}
-        if (isset($path_parts[0]) && $path_parts[0] === 'pegawai' && isset($path_parts[1])) {
-            $id_pegawai = (int)$path_parts[1];
+        if (isset($path_parts[0]) && is_numeric($path_parts[0])) {
+            $id_pegawai = (int)$path_parts[0];
             updatePegawai($pdo, $id_pegawai);
         } else {
             http_response_code(400);
@@ -43,8 +43,8 @@ switch ($method) {
 
     case 'DELETE':
         // Handles DELETE /pegawai/{id}
-        if (isset($path_parts[0]) && $path_parts[0] === 'pegawai' && isset($path_parts[1])) {
-            $id_pegawai = (int)$path_parts[1];
+        if (isset($path_parts[0]) && is_numeric($path_parts[0])) {
+            $id_pegawai = (int)$path_parts[0];
             deletePegawai($pdo, $id_pegawai);
         } else {
             http_response_code(400);
@@ -85,7 +85,6 @@ function getGajiPegawai($pdo, $id_pegawai) {
     // as it is expected by the dashboard. If not, you can set it to 0.
     $sql = "SELECT 
                 j.gaji_pokok,
-                COALESCE(j.tunjangan, 0) AS tunjangan,
                 COALESCE(pb.total_potongan, 0) AS potongan,
                 COALESCE(pb.total_lembur, 0) AS lembur
             FROM pegawai p
@@ -113,7 +112,6 @@ function getGajiPegawai($pdo, $id_pegawai) {
     if ($result) {
         // Cast to appropriate types for JSON response
         $result['gaji_pokok'] = (float) $result['gaji_pokok'];
-        $result['tunjangan'] = (float) $result['tunjangan'];
         $result['potongan'] = (float) $result['potongan'];
         $result['lembur'] = (float) $result['lembur'];
         echo json_encode($result);
