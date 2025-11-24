@@ -3,7 +3,7 @@ include '../config/database.php';
 
 // Ambil data jabatan untuk dropdown
 $jabatan_query = "SELECT id_jabatan, nama_jabatan FROM jabatan ORDER BY nama_jabatan ASC";
-$jabatan_result = mysqli_query($conn, $jabatan_query);
+$jabatan_result = mysqli_query($koneksi, $jabatan_query);
 ?>
 
 <?php include '../templates/header.php'; ?>

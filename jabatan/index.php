@@ -3,7 +3,7 @@ include '../config/database.php';
 include '../templates/header.php';
 
 // Query untuk mengambil semua data jabatan
-$query = "SELECT * FROM jabatan ORDER BY id_jabatan DESC";
+$query = "SELECT * FROM jabatan ORDER BY id_jabatan ASC";
 $result = mysqli_query($koneksi, $query);
 ?>
 

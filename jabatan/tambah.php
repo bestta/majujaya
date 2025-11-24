@@ -3,20 +3,22 @@ include '../config/database.php';
 
 // Cek jika form telah disubmit
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Ambil data dari form dan bersihkan
-    $nama_jabatan = mysqli_real_escape_string($koneksi, $_POST['nama_jabatan']);
-    $gaji_pokok = mysqli_real_escape_string($koneksi, $_POST['gaji_pokok']);
-
-    // Query untuk memasukkan data baru
-    $query = "INSERT INTO jabatan (nama_jabatan, gaji_pokok) VALUES ('$nama_jabatan', '$gaji_pokok')";
-
-    if (mysqli_query($koneksi, $query)) {
+    // Ambil data dari form
+    $nama_jabatan = $_POST['nama_jabatan'];
+    $gaji_pokok = $_POST['gaji_pokok'];
+ 
+    // Gunakan prepared statement untuk keamanan
+    $stmt = mysqli_prepare($koneksi, "INSERT INTO jabatan (nama_jabatan, gaji_pokok) VALUES (?, ?)");
+    mysqli_stmt_bind_param($stmt, "sd", $nama_jabatan, $gaji_pokok);
+ 
+    if (mysqli_stmt_execute($stmt)) {
         // Jika berhasil, redirect ke halaman utama
         header("Location: index.php");
         exit();
     } else {
-        echo "Error: " . $query . "<br>" . mysqli_error($koneksi);
+        echo "Error: " . mysqli_error($koneksi);
     }
+    mysqli_stmt_close($stmt);
 }
 
 include '../templates/header.php';

@@ -5,7 +5,7 @@ $id = (int)$_GET['id'];
 
 // Ambil data pegawai yang akan diedit
 $pegawai_query = "SELECT * FROM pegawai WHERE id_pegawai = $id";
-$pegawai_result = mysqli_query($conn, $pegawai_query);
+$pegawai_result = mysqli_query($koneksi, $pegawai_query);
 $pegawai = mysqli_fetch_assoc($pegawai_result);
 
 if (!$pegawai) {
@@ -15,7 +15,7 @@ if (!$pegawai) {
 
 // Ambil data jabatan untuk dropdown
 $jabatan_query = "SELECT id_jabatan, nama_jabatan FROM jabatan ORDER BY nama_jabatan ASC";
-$jabatan_result = mysqli_query($conn, $jabatan_query);
+$jabatan_result = mysqli_query($koneksi, $jabatan_query);
 ?>
 
 <?php include '../templates/header.php'; ?>
@@ -52,6 +52,6 @@ $jabatan_result = mysqli_query($conn, $jabatan_query);
 </form>
 
 <?php
-mysqli_close($conn);
+mysqli_close($koneksi);
 include '../templates/footer.php';
 ?>
