@@ -1,176 +1,224 @@
 <?php
 header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
-include '../config/database.php';
+require_once 'db.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
-
-// Handle preflight OPTIONS request for CORS
-if ($method == 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
 $path = isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] : '/';
 $path_parts = explode('/', trim($path, '/'));
 
-function send_response($data, $status_code = 200) {
-    http_response_code($status_code);
-    echo json_encode($data);
-    exit();
-}
+$pdo = getDbConnection();
 
 switch ($method) {
     case 'GET':
-        if (isset($path_parts[0]) && $path_parts[0] !== '' && is_numeric($path_parts[0])) {
-            $id_pegawai = intval($path_parts[0]);
-            // Cek apakah request untuk rekap gaji: GET /pegawai/{id}/gaji
-            if (isset($path_parts[1]) && $path_parts[1] == 'gaji') {
-                $bulan = $_GET['bulan'] ?? null;
-                $tahun = $_GET['tahun'] ?? null;
-
-                if (!$bulan || !$tahun) {
-                    send_response(['error' => 'Parameter bulan dan tahun diperlukan'], 400);
-                }
-                
-                // Asumsi ada tabel 'gaji' dengan struktur (id_gaji, id_pegawai, bulan, tahun, total_gaji, dll)
-                // Query ini hanyalah contoh, sesuaikan dengan struktur tabel gaji Anda.
-                $query = "SELECT * FROM gaji WHERE id_pegawai = ? AND bulan = ? AND tahun = ?";
-                $stmt = mysqli_prepare($koneksi, $query);
-                mysqli_stmt_bind_param($stmt, 'iii', $id_pegawai, $bulan, $tahun);
-                mysqli_stmt_execute($stmt);
-                $result = mysqli_stmt_get_result($stmt);
-                $gaji = mysqli_fetch_assoc($result);
-
-                if ($gaji) {
-                    send_response($gaji);
-                } else {
-                    send_response(['message' => 'Data gaji tidak ditemukan'], 404);
-                }
+        // Handles GET /pegawai AND GET /pegawai/{id}/gaji
+        if (isset($path_parts[0]) && $path_parts[0] === 'pegawai' && count($path_parts) > 1) {
+            $id_pegawai = (int)$path_parts[1];
+            if (isset($path_parts[2]) && $path_parts[2] === 'gaji') {
+                getGajiPegawai($pdo, $id_pegawai);
             } else {
-                // GET /pegawai/{id}
-                $query = "SELECT p.id_pegawai, p.nama, p.gelar, p.id_jabatan, j.nama_jabatan 
-                          FROM pegawai p
-                          JOIN jabatan j ON p.id_jabatan = j.id_jabatan
-                          WHERE p.id_pegawai = ?";
-                $stmt = mysqli_prepare($koneksi, $query);
-                mysqli_stmt_bind_param($stmt, 'i', $id_pegawai);
-                mysqli_stmt_execute($stmt);
-                $result = mysqli_stmt_get_result($stmt);
-                $pegawai = mysqli_fetch_assoc($result);
-
-                if ($pegawai) {
-                    send_response($pegawai);
-                } else {
-                    send_response(['error' => 'Pegawai tidak ditemukan'], 404);
-                }
+                // You could implement GET /pegawai/{id} here if needed
+                http_response_code(404);
+                echo json_encode(['error' => 'Endpoint not found. Did you mean /pegawai/' . $id_pegawai . '/gaji?']);
             }
         } else {
-            // GET /pegawai
-            $query = "SELECT p.id_pegawai, p.nama, p.gelar, j.nama_jabatan 
-                      FROM pegawai p
-                      JOIN jabatan j ON p.id_jabatan = j.id_jabatan
-                      ORDER BY p.nama ASC";
-            $result = mysqli_query($koneksi, $query);
-            $pegawai_list = mysqli_fetch_all($result, MYSQLI_ASSOC);
-            send_response($pegawai_list);
+            getPegawaiList($pdo);
         }
         break;
 
     case 'POST':
-        // POST /pegawai
-        $data = json_decode(file_get_contents("php://input"), true);
-
-        if (empty($data['nama']) || empty($data['id_jabatan'])) {
-            send_response(['error' => 'Nama dan id_jabatan tidak boleh kosong'], 400);
-        }
-
-        $nama = $data['nama'];
-        $gelar = $data['gelar'] ?? null;
-        $id_jabatan = $data['id_jabatan'];
-
-        $query = "INSERT INTO pegawai (nama, gelar, id_jabatan) VALUES (?, ?, ?)";
-        $stmt = mysqli_prepare($koneksi, $query);
-        mysqli_stmt_bind_param($stmt, 'ssi', $nama, $gelar, $id_jabatan);
-        
-        if (mysqli_stmt_execute($stmt)) {
-            $new_id = mysqli_insert_id($koneksi);
-            send_response(['id_pegawai' => $new_id, 'message' => 'Pegawai berhasil ditambahkan'], 201);
-        } else {
-            send_response(['error' => 'Gagal menambahkan pegawai: ' . mysqli_error($koneksi)], 500);
-        }
+        // Handles POST /pegawai
+        createPegawai($pdo);
         break;
 
     case 'PUT':
-        // PUT /pegawai/{id}
-        if (isset($path_parts[0]) && is_numeric($path_parts[0])) {
-            $id_pegawai = intval($path_parts[0]);
-            $data = json_decode(file_get_contents("php://input"), true);
-
-            if (empty($data['nama']) || empty($data['id_jabatan'])) {
-                send_response(['error' => 'Nama dan id_jabatan tidak boleh kosong'], 400);
-            }
-
-            $nama = $data['nama'];
-            $gelar = $data['gelar'] ?? null;
-            $id_jabatan = $data['id_jabatan'];
-
-            $query = "UPDATE pegawai SET nama = ?, gelar = ?, id_jabatan = ? WHERE id_pegawai = ?";
-            $stmt = mysqli_prepare($koneksi, $query);
-            mysqli_stmt_bind_param($stmt, 'ssii', $nama, $gelar, $id_jabatan, $id_pegawai);
-
-            if (mysqli_stmt_execute($stmt)) {
-                if (mysqli_stmt_affected_rows($stmt) > 0) {
-                    send_response(['message' => 'Data pegawai berhasil diperbarui']);
-                } else {
-                    send_response(['message' => 'Tidak ada data yang diperbarui atau pegawai tidak ditemukan'], 404);
-                }
-            } else {
-                send_response(['error' => 'Gagal memperbarui data: ' . mysqli_error($koneksi)], 500);
-            }
+        // Handles PUT /pegawai/{id}
+        if (isset($path_parts[0]) && $path_parts[0] === 'pegawai' && isset($path_parts[1])) {
+            $id_pegawai = (int)$path_parts[1];
+            updatePegawai($pdo, $id_pegawai);
         } else {
-            send_response(['error' => 'ID Pegawai tidak valid'], 400);
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid request. Missing employee ID.']);
         }
         break;
 
     case 'DELETE':
-        // DELETE /pegawai/{id}
-        if (isset($path_parts[0]) && is_numeric($path_parts[0])) {
-            $id_pegawai = intval($path_parts[0]);
-
-            // Periksa apakah ada record terkait di tabel lain yang memiliki ON DELETE RESTRICT
-            // Contoh: tabel gaji. Jika ada, hapus dulu record di sana atau ubah constraint.
-            // Untuk contoh ini, kita asumsikan bisa langsung dihapus.
-
-            $query = "DELETE FROM pegawai WHERE id_pegawai = ?";
-            $stmt = mysqli_prepare($koneksi, $query);
-            mysqli_stmt_bind_param($stmt, 'i', $id_pegawai);
-
-            if (mysqli_stmt_execute($stmt)) {
-                if (mysqli_stmt_affected_rows($stmt) > 0) {
-                    send_response(['message' => 'Pegawai berhasil dihapus']);
-                } else {
-                    send_response(['error' => 'Pegawai tidak ditemukan'], 404);
-                }
-            } else {
-                // Error ini kemungkinan besar terjadi karena constraint ON DELETE RESTRICT
-                if(mysqli_errno($koneksi) == 1451) { // Foreign key constraint fails
-                    send_response(['error' => 'Gagal menghapus pegawai karena data terkait masih ada di tabel lain (misal: gaji).'], 409); // 409 Conflict
-                }
-                send_response(['error' => 'Gagal menghapus pegawai: ' . mysqli_error($koneksi)], 500);
-            }
+        // Handles DELETE /pegawai/{id}
+        if (isset($path_parts[0]) && $path_parts[0] === 'pegawai' && isset($path_parts[1])) {
+            $id_pegawai = (int)$path_parts[1];
+            deletePegawai($pdo, $id_pegawai);
         } else {
-            send_response(['error' => 'ID Pegawai tidak valid'], 400);
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid request. Missing employee ID.']);
         }
         break;
 
     default:
-        send_response(['error' => 'Metode tidak diizinkan'], 405);
+        http_response_code(405);
+        echo json_encode(['error' => 'Method Not Allowed']);
         break;
 }
 
-mysqli_close($koneksi);
+/**
+ * GET /pegawai
+ * Fetches a list of all employees with their job titles.
+ */
+function getPegawaiList($pdo) {
+    $stmt = $pdo->query(
+        "SELECT p.id_pegawai, p.nama, p.gelar, j.nama_jabatan AS jabatan 
+         FROM pegawai p 
+         JOIN jabatan j ON p.id_jabatan = j.id_jabatan 
+         ORDER BY p.nama"
+    );
+    $pegawai = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    echo json_encode($pegawai);
+}
+
+/**
+ * GET /pegawai/{id}/gaji?bulan=MM&tahun=YYYY
+ * Calculates salary for a specific employee for a given period.
+ */
+function getGajiPegawai($pdo, $id_pegawai) {
+    $bulan = isset($_GET['bulan']) ? (int)$_GET['bulan'] : date('m');
+    $tahun = isset($_GET['tahun']) ? (int)$_GET['tahun'] : date('Y');
+
+    // Note: I've added `j.tunjangan` to the query, assuming it exists in your `jabatan` table
+    // as it is expected by the dashboard. If not, you can set it to 0.
+    $sql = "SELECT 
+                j.gaji_pokok,
+                COALESCE(j.tunjangan, 0) AS tunjangan,
+                COALESCE(pb.total_potongan, 0) AS potongan,
+                COALESCE(pb.total_lembur, 0) AS lembur
+            FROM pegawai p
+            JOIN jabatan j ON p.id_jabatan = j.id_jabatan
+            LEFT JOIN (
+                SELECT
+                    id_pegawai,
+                    (SUM(CASE WHEN status_hadir = 'alpa' THEN 1 ELSE 0 END) * 100000) + (SUM(COALESCE(terlambat_menit, 0)) * 2000) AS total_potongan,
+                    (SUM(COALESCE(lembur_menit, 0)) * 1000) AS total_lembur
+                FROM presensi
+                WHERE MONTH(tanggal) = :bulan AND YEAR(tanggal) = :tahun AND id_pegawai = :id_pegawai
+                GROUP BY id_pegawai
+            ) pb ON p.id_pegawai = pb.id_pegawai
+            WHERE p.id_pegawai = :id_pegawai";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        ':id_pegawai' => $id_pegawai,
+        ':bulan' => $bulan,
+        ':tahun' => $tahun
+    ]);
+
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($result) {
+        // Cast to appropriate types for JSON response
+        $result['gaji_pokok'] = (float) $result['gaji_pokok'];
+        $result['tunjangan'] = (float) $result['tunjangan'];
+        $result['potongan'] = (float) $result['potongan'];
+        $result['lembur'] = (float) $result['lembur'];
+        echo json_encode($result);
+    } else {
+        http_response_code(404);
+        echo json_encode(['error' => 'Employee not found or no salary data available.']);
+    }
+}
+
+/**
+ * POST /pegawai
+ * Creates a new employee.
+ */
+function createPegawai($pdo) {
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    if (empty($data['nama']) || empty($data['id_jabatan'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Bad Request: Missing required fields (nama, id_jabatan).']);
+        return;
+    }
+
+    $sql = "INSERT INTO pegawai (nama, gelar, id_jabatan) VALUES (:nama, :gelar, :id_jabatan)";
+    $stmt = $pdo->prepare($sql);
+
+    try {
+        $stmt->execute([
+            ':nama' => $data['nama'],
+            ':gelar' => isset($data['gelar']) ? $data['gelar'] : null,
+            ':id_jabatan' => $data['id_jabatan']
+        ]);
+        $id = $pdo->lastInsertId();
+        http_response_code(201);
+        echo json_encode(['message' => 'Employee created successfully.', 'id_pegawai' => $id]);
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to create employee: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * PUT /pegawai/{id}
+ * Updates an existing employee.
+ */
+function updatePegawai($pdo, $id_pegawai) {
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    if (empty($data)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Bad Request: No data provided.']);
+        return;
+    }
+
+    $sql = "UPDATE pegawai SET nama = :nama, gelar = :gelar, id_jabatan = :id_jabatan WHERE id_pegawai = :id_pegawai";
+    $stmt = $pdo->prepare($sql);
+
+    try {
+        $stmt->execute([
+            ':nama' => $data['nama'],
+            ':gelar' => isset($data['gelar']) ? $data['gelar'] : null,
+            ':id_jabatan' => $data['id_jabatan'],
+            ':id_pegawai' => $id_pegawai
+        ]);
+
+        if ($stmt->rowCount() > 0) {
+            echo json_encode(['message' => 'Employee updated successfully.']);
+        } else {
+            http_response_code(404);
+            echo json_encode(['error' => 'Employee not found or no changes made.']);
+        }
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to update employee: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * DELETE /pegawai/{id}
+ * Deletes an employee.
+ */
+function deletePegawai($pdo, $id_pegawai) {
+    // Note: Deletion might fail if there are related records in `presensi`
+    // due to the ON DELETE RESTRICT foreign key constraint.
+    // You might want to handle this case gracefully.
+    $sql = "DELETE FROM pegawai WHERE id_pegawai = :id_pegawai";
+    $stmt = $pdo->prepare($sql);
+
+    try {
+        $stmt->execute([':id_pegawai' => $id_pegawai]);
+
+        if ($stmt->rowCount() > 0) {
+            echo json_encode(['message' => 'Employee deleted successfully.']);
+        } else {
+            http_response_code(404);
+            echo json_encode(['error' => 'Employee not found.']);
+        }
+    } catch (PDOException $e) {
+        // Catches foreign key constraint violations
+        if ($e->getCode() == '23000') {
+            http_response_code(409); // Conflict
+            echo json_encode(['error' => 'Cannot delete employee. They have existing attendance records.']);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to delete employee: ' . $e->getMessage()]);
+        }
+    }
+}
 ?>
