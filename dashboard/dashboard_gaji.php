@@ -1,5 +1,5 @@
 <?php
-include 'db.php';
+include '../templates/header.php';
 include '../config/database.php';
 
 $query = "SELECT
