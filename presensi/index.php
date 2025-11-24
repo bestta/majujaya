@@ -39,7 +39,6 @@ include '../templates/header.php';
 <?php endif; ?>
 
 <a href="create.php" class="btn btn-primary mb-3">Tambah Presensi</a>
-<a href="export_gaji.php?bulan=01&tahun=2025" class="btn btn-success">Export Excel</a>
 
 
 <table class="table table-striped table-hover">
