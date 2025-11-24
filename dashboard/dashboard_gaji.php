@@ -36,7 +36,7 @@ $result = $koneksi->query($query);
 <body class="bg-light">
 
 <div class="container py-5">
-    <h2 class="mb-4 text-center">Dashboard Gaji Pegawai</h2>
+    <h2 class="mb-4">Dashboard Gaji Pegawai</h2>
 
     <div class="card shadow-sm">
         <div class="card-body">
@@ -71,5 +71,58 @@ $result = $koneksi->query($query);
                 </div>
             </div>
         </div>
+    </div>
+
+
+        <div class="container py-5">
+    <h2 class="mb-4">Dashboard Pegawai</h2>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>No</th>
+                        <th>Nama</th>
+                        <th>Gelar</th>
+                        <th>Jabatan</th>
+                       
+                    </tr>
+                </thead>
+                <tbody>
+                <?php
+                include 'database.php';
+                $no = 1;
+                $query = "SELECT k.id_pegawai, k.nama, k.gelar, j.nama_jabatan 
+                            FROM pegawai k
+                            INNER JOIN jabatan j ON k.id_jabatan = j.id_jabatan
+                            ORDER BY
+                            CASE gelar
+                                WHEN 'D3' THEN 1
+                                WHEN 'S1' THEN 2
+                                WHEN 'S2' THEN 3
+                                ELSE 4
+                            END,
+                            nama";
+                $result = $koneksi->query($query);
+
+                while ($row = $result->fetch_assoc()): ?>
+                    <tr>
+                        <td><?= $no++; ?></td>
+                        <td><?= $row['nama']; ?></td>
+                        <td><?= $row['gelar']; ?></td>
+                        <td><?= $row['nama_jabatan']; ?></td>
+                    </tr>
+                <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+
 </body>
 </html>
+
+
+
