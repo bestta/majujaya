@@ -1,5 +1,5 @@
 <?php
-include 'db.php';
+include '../config/database.php';
 
 $query = "SELECT
     k.nama AS Pegawai,
@@ -22,7 +22,7 @@ LEFT JOIN (
 ) pb ON k.id_pegawai = pb.id_pegawai
 ORDER BY k.nama";
 
-$result = $conn->query($query);
+$result = $koneksi->query($query);
 ?>
 <!DOCTYPE html>
 <html lang="en">
