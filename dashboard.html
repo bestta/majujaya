@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Kepegawaian - Maju Jaya</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .card-icon {
+            font-size: 3rem;
+            opacity: 0.3;
+        }
+        .card {
+            transition: transform .2s;
+        }
+        .card:hover {
+            transform: scale(1.02);
+        }
+        .table-responsive {
+            max-height: 60vh;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                Dashboard Kepegawaian PT. Maju Jaya
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 id="dashboard-title">Rekap Bulan Ini</h2>
+            <div>
+                <label for="month-filter" class="form-label">Filter Bulan:</label>
+                <input type="month" id="month-filter" class="form-control">
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="card text-white bg-primary shadow">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">Jumlah Pegawai</h5>
+                            <p class="card-text fs-2 fw-bold" id="total-pegawai">0</p>
+                        </div>
+                        <div class="card-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" class="bi bi-people-fill" viewBox="0 0 16 16"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-success shadow">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">Total Lembur Bulan Ini</h5>
+                            <p class="card-text fs-2 fw-bold" id="total-lembur">Rp 0</p>
+                        </div>
+                         <div class="card-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" class="bi bi-clock-history" viewBox="0 0 16 16"><path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976c.383.086.76.2 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.302zm-1.207 1.192c.176.044.35.084.52.129l.682-.72A8 8 0 0 0 11.14.823l-.358.928a7 7 0 0 0 .454.29zm-.549 1.138a7 7 0 0 0 .52 1.138l.72-.682a8 8 0 0 0-.52-1.138zM8 5.5a.5.5 0 0 1 .5.5v2.5a.5.5 0 0 1-1 0v-2.5a.5.5 0 0 1 .5-.5m-2.493 5.01A7 7 0 0 0 8 15a7 7 0 0 0 5.493-2.493l.707.707A8 8 0 1 1 4.78 4.78l-.707-.707a7 7 0 0 0 1.428 7.43z"/></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-danger shadow">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">Total Potongan Bulan Ini</h5>
+                            <p class="card-text fs-2 fw-bold" id="total-potongan">Rp 0</p>
+                        </div>
+                         <div class="card-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" class="bi bi-scissors" viewBox="0 0 16 16"><path d="M3.5 3.5c-.614-.884-.074-1.962.858-2.5L8 7.226 11.642 1c.932.538 1.472 1.616.858 2.5L8.81 8.61l1.556 2.661a2.5 2.5 0 1 1-.794.637L8 9.73l-1.572 2.177a2.5 2.5 0 1 1-.794-.637L7.19 8.61zm2.5 10a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0m7 0a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0"/></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Salary Table -->
+        <div class="card shadow">
+            <div class="card-header">
+                <h4 class="mb-0">Rekap Gaji Pegawai</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>No</th>
+                                <th>Nama Pegawai</th>
+                                <th>Jabatan</th>
+                                <th>Gaji Pokok</th>
+                                <th>Tunjangan</th>
+                                <th>Lembur</th>
+                                <th>Potongan</th>
+                                <th>Gaji Bersih</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gaji-table-body">
+                           <!-- Data akan diisi oleh JavaScript -->
+                           <tr><td colspan="8" class="text-center">Memuat data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center mt-4 pb-3">
+        <p>&copy; 2024 PT. Maju Jaya</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const monthFilter = document.getElementById('month-filter');
+            const today = new Date();
+            // Format to YYYY-MM
+            const currentMonth = today.getFullYear() + '-' + ('0' + (today.getMonth() + 1)).slice(-2);
+            monthFilter.value = currentMonth;
+
+            loadDashboardData(monthFilter.value);
+
+            monthFilter.addEventListener('change', () => {
+                loadDashboardData(monthFilter.value);
+            });
+        });
+
+        async function loadDashboardData(period) {
+            const [year, month] = period.split('-');
+            
+            // Update title
+            const monthName = new Date(year, month - 1, 1).toLocaleString('id-ID', { month: 'long' });
+            document.getElementById('dashboard-title').textContent = `Rekap Bulan ${monthName} ${year}`;
+            
+            // Reset UI
+            document.getElementById('gaji-table-body').innerHTML = `<tr><td colspan="8" class="text-center">Memuat data...</td></tr>`;
+            document.getElementById('total-lembur').textContent = 'Rp 0';
+            document.getElementById('total-potongan').textContent = 'Rp 0';
+
+            const API_BASE_URL = 'api/pegawai.php'; // URL API yang baru
+
+            try {
+                // 1. Fetch all employees
+                const responsePegawai = await fetch(API_BASE_URL);
+                if (!responsePegawai.ok) throw new Error('Gagal mengambil data pegawai.');
+                const pegawaiList = await responsePegawai.json(); // Berisi {id_pegawai, nama, gelar, nama_jabatan}
+
+                document.getElementById('total-pegawai').textContent = pegawaiList.length;
+
+                if (pegawaiList.length === 0) {
+                    document.getElementById('gaji-table-body').innerHTML = `<tr><td colspan="8" class="text-center">Tidak ada data pegawai.</td></tr>`;
+                    return;
+                }
+
+                // 2. Fetch salary details for each employee for the selected month
+                const salaryPromises = pegawaiList.map(p => 
+                    // Menggunakan format URL API yang baru: /pegawai/{id}/gaji
+                    fetch(`${API_BASE_URL}/${p.id_pegawai}/gaji?bulan=${month}&tahun=${year}`)
+                        .then(async res => {
+                            if (res.ok) {
+                                const gajiData = await res.json();
+                                // Gabungkan data pegawai (nama, jabatan) dengan data gaji
+                                return { ...p, ...gajiData };
+                            }
+                            // Jika data gaji tidak ditemukan (404), kembalikan data pegawai dasar
+                            return { ...p, gaji_pokok: 0, tunjangan: 0, lembur: 0, potongan: 0 };
+                        })
+                );
+                
+                const combinedData = await Promise.all(salaryPromises);
+
+                // 3. Process and display data
+                populateTableAndCards(combinedData);
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('gaji-table-body').innerHTML = `<tr><td colspan="8" class="text-center text-danger">Gagal memuat data. Periksa koneksi API.</td></tr>`;
+            }
+        }
+
+        function populateTableAndCards(salaryData) {
+            const tableBody = document.getElementById('gaji-table-body');
+            const formatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+
+            let totalLembur = 0;
+            let totalPotongan = 0;
+
+            if (salaryData.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="8" class="text-center">Tidak ada data gaji untuk periode ini.</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = ''; // Clear loading/previous state
+
+            salaryData.forEach((data, index) => {
+                totalLembur += data.lembur || 0;
+                totalPotongan += data.potongan || 0;
+                
+                // Recalculate gaji bersih based on API data
+                const gajiBersih = (data.gaji_pokok + data.tunjangan + (data.lembur || 0)) - (data.potongan || 0);
+
+                const row = `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${data.nama}</td>
+                        <td>${data.jabatan}</td>
+                        <td>${formatter.format(data.gaji_pokok)}</td>
+                        <td>${formatter.format(data.tunjangan)}</td>
+                        <td>${formatter.format(data.lembur || 0)}</td>
+                        <td>${formatter.format(data.potongan || 0)}</td>
+                        <td>${formatter.format(gajiBersih)}</td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+
+            document.getElementById('total-lembur').textContent = formatter.format(totalLembur);
+            document.getElementById('total-potongan').textContent = formatter.format(totalPotongan);
+        }
+    </script>
+</body>
+</html>

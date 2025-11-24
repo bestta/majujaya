@@ -1,0 +1,5 @@
+# Ignore Composer dependencies
+/vendor/
+
+# Ignore sensitive configuration files
+/config/database.php
