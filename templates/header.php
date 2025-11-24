@@ -16,7 +16,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], 'presensi') !== false ? 'active' : ''; ?>" href="/majujaya/dashboard.html">Dashboard</a>
+                        <a class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], 'presensi') !== false ? 'active' : ''; ?>" href="/majujaya/dashboard_gaji.php">Dashboard</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], 'jabatan') !== false ? 'active' : ''; ?>" href="/majujaya/jabatan/index.php">Manajemen Jabatan</a>

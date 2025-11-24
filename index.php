@@ -9,7 +9,7 @@
         <a href="jabatan/index.php" class="btn btn-primary btn-lg">Mulai Kelola Jabatan</a>
         <a href="pegawai/index.php" class="btn btn-primary btn-lg">Mulai Kelola Pegawai</a>
         <a href="presensi/index.php" class="btn btn-primary btn-lg">Mulai Kelola Presensi</a>
-        <a href="/majujaya/dashboard.html" class="btn btn-primary btn-lg">Dashboard</a>
+        <a href="/majujaya/dashboard_gaji.php" class="btn btn-primary btn-lg">Dashboard</a>
     </div>
 </div>
 
