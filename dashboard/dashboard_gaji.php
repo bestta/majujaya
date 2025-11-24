@@ -1,5 +1,6 @@
 <?php
 include '../config/database.php';
+include '../templates/header.php';
 
 $query = "SELECT
     k.nama AS Pegawai,
