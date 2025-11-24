@@ -24,7 +24,7 @@ if (!$result) {
     die("Query Error: " . mysqli_error($koneksi));
 }
 
-include '../templates/header.php';
+
 ?>
 
 <h1 class="mb-4">Manajemen Presensi</h1>
